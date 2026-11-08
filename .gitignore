@@ -1,0 +1,5 @@
+.env
+**/.env
+__pycache__/
+*.pyc
+upload_to_r2/images/
