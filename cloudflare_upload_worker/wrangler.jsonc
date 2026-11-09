@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pixelp-upload",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "upload.pixelp.ahammed.xyz",
+      "custom_domain": true
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PIXELP_BUCKET",
+      "bucket_name": "pixelp"
+    }
+  ]
+}

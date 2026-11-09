@@ -4,6 +4,9 @@ This directory contains the JavaScript Worker that publishes Instagram posts.
 It is the only publishing runtime in this repository; the old Python Worker
 runner has been removed.
 
+Browser uploads are handled by the separate `cloudflare_upload_worker`; this
+Worker does not expose the upload UI.
+
 ## What the Worker does
 
 1. Lists JPEG objects under the `queue_` prefix in R2.

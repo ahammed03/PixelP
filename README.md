@@ -5,7 +5,7 @@ Gemini to generate a caption and publishes the next image to an Instagram
 Professional account through Meta's Instagram API.
 
 ```text
-local uploader -> R2 queue -> daily Worker Cron
+browser upload / local uploader -> R2 queue -> daily Worker Cron
                          -> Gemini caption
                          -> Instagram media container
                          -> Instagram publish
@@ -24,10 +24,15 @@ cloudflare_worker/
   src/index.js          Cloudflare Worker
   wrangler.jsonc        R2, KV, variables, and Cron configuration
   README.md             Worker deployment and operations guide
+
+cloudflare_upload_worker/
+  src/index.js          Public mobile upload Worker
+  wrangler.jsonc        Custom domain and R2 configuration
+  README.md             Upload Worker deployment guide
 ```
 
 The old Python Worker runner has been removed. Python remains only in the
-local R2 uploader.
+local R2 uploader. Scheduling and browser uploads use separate Workers.
 
 ## Prerequisites
 
@@ -58,7 +63,27 @@ python .\upload_to_r2\upload_to_r2.py
 Use JPEG files for Instagram. The Worker ignores SVG and other unsupported
 queue objects.
 
-## 2. Configure the Worker
+## 2. Upload from a browser or mobile
+
+Deploy `cloudflare_upload_worker` and set its secret:
+
+```powershell
+cd .\cloudflare_upload_worker
+npx wrangler login
+npx wrangler deploy
+npx wrangler secret put UPLOAD_SECRET
+```
+
+Then open:
+
+```text
+https://upload.pixelp.ahammed.xyz
+```
+
+Enter the shared upload secret and choose a JPEG. The upload Worker writes the
+same timestamped `queue_` key format to the `pixelp` R2 bucket.
+
+## 3. Configure the scheduling Worker
 
 `cloudflare_worker/wrangler.jsonc` contains the non-secret R2, KV, public URL,
 Gemini model, Instagram API version, and Cron settings. Cron uses UTC;
@@ -66,7 +91,7 @@ Gemini model, Instagram API version, and Cron settings. Cron uses UTC;
 
 Do not put API keys or access tokens in `wrangler.jsonc`.
 
-## 3. Authenticate and deploy
+## 4. Authenticate and deploy
 
 ```powershell
 cd .\cloudflare_worker
@@ -102,14 +127,14 @@ Invoke-WebRequest `
 
 The trigger runs the same Gemini, R2, KV, and Instagram flow as Cron.
 
-## 4. Runtime flow
+## 5. Runtime flow
 
 The scheduled Worker selects the first JPEG after the key stored in KV,
 downloads it from R2, asks Gemini for JSON caption data, creates an Instagram
 media container, waits for processing, publishes it, and updates KV only after
 successful publication.
 
-## 5. Health check
+## 6. Health check
 
 Open the deployed Worker URL. It should return:
 
