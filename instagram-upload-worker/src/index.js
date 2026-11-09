@@ -13,7 +13,7 @@ function uploadPage() {
 <form id="form"><label for="image">JPEG image</label><input id="image" name="image" type="file" accept="image/jpeg,.jpg,.jpeg" required>
 <label for="secret">Upload secret</label><input id="secret" name="secret" type="password" autocomplete="current-password" required>
 <button id="button" type="submit">Upload image</button></form><div id="result"></div></main>
-<script>const form=document.querySelector('#form'),button=document.querySelector('#button'),result=document.querySelector('#result');form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;result.textContent='Uploading...';try{const response=await fetch('/upload',{method:'POST',body:new FormData(form)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Upload failed');result.textContent='Uploaded successfully.\n'+data.key}catch(error){result.textContent=error.message}finally{button.disabled=false}});</script>
+<script>const form=document.querySelector('#form'),button=document.querySelector('#button'),result=document.querySelector('#result');form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;result.textContent='Uploading...';try{const response=await fetch('/upload',{method:'POST',body:new FormData(form)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Upload failed');result.textContent='Uploaded successfully.\\n'+data.key}catch(error){result.textContent=error.message}finally{button.disabled=false}});</script>
 </body></html>`;
 }
 
