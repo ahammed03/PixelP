@@ -32,9 +32,23 @@ Store credentials as encrypted Wrangler secrets:
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put INSTAGRAM_ACCESS_TOKEN
 npx wrangler secret put INSTAGRAM_USER_ID
+npx wrangler secret put PUBLISH_TRIGGER_SECRET
 ```
 
 Never add secret values to `wrangler.jsonc`, source files, or README files.
+
+For an immediate test, call the protected trigger endpoint:
+
+```powershell
+$headers = @{ Authorization = "Bearer <trigger-secret>" }
+Invoke-WebRequest `
+  -Uri "https://<worker-subdomain>.workers.dev/trigger" `
+  -Method Post `
+  -Headers $headers
+```
+
+The endpoint runs the same Gemini, R2, KV, and Instagram flow as Cron. Keep
+`PUBLISH_TRIGGER_SECRET` private.
 
 ## Required configuration
 

@@ -80,6 +80,7 @@ Store credentials as encrypted Wrangler secrets:
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put INSTAGRAM_ACCESS_TOKEN
 npx wrangler secret put INSTAGRAM_USER_ID
+npx wrangler secret put PUBLISH_TRIGGER_SECRET
 ```
 
 Deploy again after changing Worker code or configuration:
@@ -87,6 +88,19 @@ Deploy again after changing Worker code or configuration:
 ```powershell
 npx wrangler deploy
 ```
+
+To run the Worker immediately instead of waiting for Cron, call its protected
+trigger endpoint with the trigger secret:
+
+```powershell
+$headers = @{ Authorization = "Bearer <trigger-secret>" }
+Invoke-WebRequest `
+  -Uri "https://<worker-subdomain>.workers.dev/trigger" `
+  -Method Post `
+  -Headers $headers
+```
+
+The trigger runs the same Gemini, R2, KV, and Instagram flow as Cron.
 
 ## 4. Runtime flow
 
