@@ -26,6 +26,9 @@ npx wrangler deploy
 npx wrangler secret put UPLOAD_SECRET
 ```
 
+The local reference file is `.env.example`. Keep any real `.env` file local;
+production uses the Wrangler secret above.
+
 Use a strong shared secret. Never place it in this file or in `wrangler.jsonc`.
 
 The Worker accepts JPEG files up to 10 MB. The R2 bucket must have a public

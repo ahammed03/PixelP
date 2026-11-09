@@ -3,4 +3,4 @@
 __pycache__/
 *.pyc
 .wrangler/
-upload_to_r2/images/
+upload_to_r2/

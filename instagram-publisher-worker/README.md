@@ -4,7 +4,7 @@ This directory contains the JavaScript Worker that publishes Instagram posts.
 It is the only publishing runtime in this repository; the old Python Worker
 runner has been removed.
 
-Browser uploads are handled by the separate `cloudflare_upload_worker`; this
+Browser uploads are handled by the separate `instagram-upload-worker`; this
 Worker does not expose the upload UI.
 
 ## What the Worker does
@@ -72,19 +72,10 @@ INSTAGRAM_ACCESS_TOKEN
 INSTAGRAM_USER_ID
 ```
 
-## Local upload workflow
+## Upload source
 
-From the repository root:
-
-```powershell
-python .\upload_to_r2\upload_to_r2.py
-```
-
-Only JPEG files should be queued for Instagram. The uploader creates keys like:
-
-```text
-queue_09112026/20261109T100220817421Z-203e1cdaf1fb-photo.jpg
-```
+Use the separate upload Worker at `https://pixelp.ahammed.xyz`. It writes
+timestamped JPEG keys to the same R2 bucket used by this publisher.
 
 ## Health check
 
