@@ -3,7 +3,7 @@
 This separate Worker provides the public upload page at:
 
 ```text
-https://upload.pixelp.ahammed.xyz
+https://pixelp.ahammed.xyz
 ```
 
 It accepts a JPEG and a shared upload secret, then stores the image in the

@@ -77,7 +77,7 @@ npx wrangler secret put UPLOAD_SECRET
 Then open:
 
 ```text
-https://upload.pixelp.ahammed.xyz
+https://pixelp.ahammed.xyz
 ```
 
 Enter the shared upload secret and choose a JPEG. The upload Worker writes the
