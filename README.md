@@ -1,38 +1,46 @@
-# PixelP
+# PixelP Instagram Publisher
 
-PixelP is a lightweight Instagram Creator auto-publishing pipeline built around Cloudflare R2, Cloudflare Workers, Workers KV, Gemini, and the Meta Instagram API.
-
-## How it works
+PixelP uploads JPEG images to Cloudflare R2, then a Cloudflare Worker uses
+Gemini to generate a caption and publishes the next image to an Instagram
+Professional account through Meta's Instagram API.
 
 ```text
-Windows uploader → Cloudflare R2 queue_DDMMYYYY/...
-                 → Cron wakes the Python Worker
-                 → Worker selects the next image after the KV checkpoint
-                 → Gemini creates caption and hashtags
-                 → Meta publishes the Instagram post
-                 → KV stores the last published R2 object key
+local uploader -> R2 queue -> daily Worker Cron
+                         -> Gemini caption
+                         -> Instagram media container
+                         -> Instagram publish
+                         -> KV checkpoint
 ```
 
-The Cron Trigger only starts the Worker. Publishing runs inside the Worker’s `scheduled()` handler.
-
-## Project folders
+## Repository layout
 
 ```text
 upload_to_r2/
-  upload_to_r2.py       Uploads local images to R2
-  .env.example          Uploader configuration template
-  images/               Local-only images; ignored by Git
+  upload_to_r2.py       Local R2 uploader
+  .env.example          Local uploader configuration template
+  images/               Local images; ignored by Git
 
 cloudflare_worker/
-  script.py             Windows runner and Python Worker entrypoint
-  .env.example          Worker configuration template
+  src/index.js          Cloudflare Worker
+  wrangler.jsonc        R2, KV, variables, and Cron configuration
+  README.md             Worker deployment and operations guide
 ```
 
-Secrets and image files are intentionally excluded from Git.
+The old Python Worker runner has been removed. Python remains only in the
+local R2 uploader.
 
-## Upload images to R2
+## Prerequisites
 
-Create `upload_to_r2/.env` from the example file:
+- Cloudflare R2 bucket named `pixelp`.
+- A public R2 development URL for that bucket.
+- A Cloudflare KV namespace for the publishing checkpoint.
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+- An Instagram Business or Creator account with Meta publishing access.
+- Node.js, `npx`, and Python for the local uploader.
+
+## 1. Configure the local uploader
+
+Copy `upload_to_r2/.env.example` to `upload_to_r2/.env` and fill in:
 
 ```env
 ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
@@ -41,73 +49,63 @@ ACCESS_KEY_ID=<r2-access-key>
 SECRET_ACCESS_KEY=<r2-secret-key>
 ```
 
-Place `.jpg`, `.jpeg`, `.png`, or `.webp` files in `upload_to_r2/images/`, then run:
+Put JPEG files in `upload_to_r2/images/` and upload them:
 
 ```powershell
 python .\upload_to_r2\upload_to_r2.py
 ```
 
-Objects use a date folder and unique UTC timestamp/hash key:
+Use JPEG files for Instagram. The Worker ignores SVG and other unsupported
+queue objects.
 
-```text
-queue_08112026/20261108T134512123456Z-a1b2c3d4e5f6-photo.jpg
-```
+## 2. Configure the Worker
 
-To assign a future UTC schedule to a batch:
+`cloudflare_worker/wrangler.jsonc` contains the non-secret R2, KV, public URL,
+Gemini model, Instagram API version, and Cron settings. Cron uses UTC;
+`30 12 * * *` means once daily at 6:00 PM India Standard Time.
 
-```powershell
-python .\upload_to_r2\upload_to_r2.py --scheduled-at 20261109T183000Z
-```
+Do not put API keys or access tokens in `wrangler.jsonc`.
 
-The uploader does not perform duplicate checking. Every run uploads the selected files.
-
-## Configure the Worker
-
-Create `cloudflare_worker/.env` from its example file and provide:
-
-```env
-ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-R2_BUCKET=pixelp
-ACCESS_KEY_ID=<r2-access-key>
-SECRET_ACCESS_KEY=<r2-secret-key>
-CLOUDFLARE_ACCOUNT_ID=<account-id>
-CLOUDFLARE_KV_NAMESPACE_ID=<kv-namespace-id>
-CLOUDFLARE_API_TOKEN=<token-with-kv-read-write>
-LAST_PUBLISHED_KV_KEY=instagram:last_published
-PUBLIC_MEDIA_BASE_URL=https://your-worker.example.com/media
-GEMINI_API_KEY=<gemini-api-key>
-GEMINI_MODEL=gemini-2.5-flash-lite
-INSTAGRAM_USER_ID=<instagram-professional-account-id>
-INSTAGRAM_ACCESS_TOKEN=<instagram-access-token>
-INSTAGRAM_API_VERSION=v24.0
-```
-
-`PUBLIC_MEDIA_BASE_URL` must return the selected R2 image without authentication so Meta can fetch it.
-
-## Run locally on Windows
+## 3. Authenticate and deploy
 
 ```powershell
-python .\cloudflare_worker\script.py --once
+cd .\cloudflare_worker
+npx wrangler login
+npx wrangler deploy
 ```
 
-The runner selects the first queued object after the key stored in KV, asks Gemini for content, publishes through Meta, and updates KV only after successful publication.
+Store credentials as encrypted Wrangler secrets:
 
-## Cloudflare Python Worker
+```powershell
+npx wrangler secret put GEMINI_API_KEY
+npx wrangler secret put INSTAGRAM_ACCESS_TOKEN
+npx wrangler secret put INSTAGRAM_USER_ID
+```
 
-Point Wrangler at `cloudflare_worker/script.py`, enable the `python_workers` compatibility flag, configure the values above as Worker secrets, and add a Cron Trigger:
+Deploy again after changing Worker code or configuration:
+
+```powershell
+npx wrangler deploy
+```
+
+## 4. Runtime flow
+
+The scheduled Worker selects the first JPEG after the key stored in KV,
+downloads it from R2, asks Gemini for JSON caption data, creates an Instagram
+media container, waits for processing, publishes it, and updates KV only after
+successful publication.
+
+## 5. Health check
+
+Open the deployed Worker URL. It should return:
 
 ```text
-* * * * *
+PixelP Instagram publisher is running.
 ```
-
-Cron runs in UTC. The Worker checks the timestamp embedded in each R2 object key and processes the next unpublished image.
-
-## Instagram requirements
-
-The connected account must be an Instagram Professional account, such as Creator or Business. Meta publishing uses a media-container flow: create the container, wait for processing, then call `media_publish`.
 
 ## Security
 
-- Never commit `.env` files, access tokens, or API keys.
-- Use separate development and production credentials.
-- Rotate credentials that are accidentally exposed.
+- Never commit `.env`, `.dev.vars`, API keys, access tokens, or R2 secrets.
+- Use Wrangler secrets for Worker credentials.
+- Keep the R2 public URL limited to media objects.
+- Rotate any credential that has been exposed.

@@ -1,23 +1,87 @@
-# Cloudflare Instagram publisher
+# PixelP Cloudflare Worker
 
-`script.py` selects the first queued R2 image after the last key stored in KV,
-sends the image to Gemini for a caption and hashtags, publishes it through
-Meta's Instagram API, then stores the published R2 key in KV.
+This directory contains the JavaScript Worker that publishes Instagram posts.
+It is the only publishing runtime in this repository; the old Python Worker
+runner has been removed.
 
-## Windows
+## What the Worker does
 
-Copy `.env.example` to `.env`, fill in the values, then run:
+1. Lists JPEG objects under the `queue_` prefix in R2.
+2. Reads the last published object key from KV.
+3. Downloads the next image from R2 and builds its public R2 URL.
+4. Sends the image to Gemini for a caption and hashtags.
+5. Creates an Instagram media container.
+6. Waits for Meta to finish processing the container.
+7. Publishes the container and writes the key to KV.
+
+The default Cron is `30 12 * * *`, which is 6:00 PM IST because Cloudflare
+Cron expressions use UTC.
+
+## Deploy
+
+From this directory:
 
 ```powershell
-python .\script.py --once
+npx wrangler login
+npx wrangler deploy
 ```
 
-## Cloudflare Python Worker
+Store credentials as encrypted Wrangler secrets:
 
-Python Workers support the `python_workers` compatibility flag. Point Wrangler's
-`main` at `script.py`, configure the same names as Worker secrets, and add a
-Cron Trigger. The trigger only invokes the `scheduled()` handler; publishing
-logic stays in `run_once()`.
+```powershell
+npx wrangler secret put GEMINI_API_KEY
+npx wrangler secret put INSTAGRAM_ACCESS_TOKEN
+npx wrangler secret put INSTAGRAM_USER_ID
+```
 
-The public media route must return the R2 object without authentication so Meta
-can fetch the image. `PUBLIC_MEDIA_BASE_URL` should point to that route.
+Never add secret values to `wrangler.jsonc`, source files, or README files.
+
+## Required configuration
+
+`wrangler.jsonc` contains only non-secret configuration:
+
+- `PIXELP_BUCKET`: R2 bucket binding.
+- `PIXELP_KV`: KV namespace binding.
+- `PUBLIC_MEDIA_BASE_URL`: public R2 development URL.
+- `GEMINI_MODEL`: Gemini model name.
+- `INSTAGRAM_API_VERSION`: Graph API version.
+- `PUBLISH_ENABLED`: production publish switch.
+
+The Worker requires these secrets:
+
+```text
+GEMINI_API_KEY
+INSTAGRAM_ACCESS_TOKEN
+INSTAGRAM_USER_ID
+```
+
+## Local upload workflow
+
+From the repository root:
+
+```powershell
+python .\upload_to_r2\upload_to_r2.py
+```
+
+Only JPEG files should be queued for Instagram. The uploader creates keys like:
+
+```text
+queue_09112026/20261109T100220817421Z-203e1cdaf1fb-photo.jpg
+```
+
+## Health check
+
+Open the deployed Worker URL in a browser. It should return:
+
+```text
+PixelP Instagram publisher is running.
+```
+
+## Troubleshooting
+
+- `No new queued JPEG found`: upload a JPEG to R2 or inspect the KV checkpoint.
+- Gemini errors: verify `GEMINI_API_KEY` and `GEMINI_MODEL`.
+- Instagram errors: verify the Professional account, user ID, token, and
+  public R2 URL.
+- Duplicate protection: confirm the `PIXELP_KV` binding exists and
+  `PUBLISH_ENABLED` is `true`.
