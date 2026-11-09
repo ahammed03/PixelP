@@ -42,7 +42,7 @@ uploads, but the supported upload path is the browser Worker.
 cd .\instagram-upload-worker
 npx wrangler login
 npx wrangler deploy
-npx wrangler secret put UPLOAD_SECRET
+npx wrangler d1 migrations apply pixelp --remote
 ```
 
 Open:
@@ -87,6 +87,7 @@ Invoke-WebRequest `
 - Never commit `.env`, API keys, access tokens, R2 credentials, or shared
   secrets.
 - Use `npx wrangler secret put ...` for production secrets.
-- Keep `PUBLISH_TRIGGER_SECRET` and `UPLOAD_SECRET` different.
-- The upload secret is shared access, not per-user authentication.
+- Keep `PUBLISH_TRIGGER_SECRET` private.
+- Upload users and sessions are stored in D1; no separate upload secret is
+  required.
 - Rotate any credential that has been exposed.

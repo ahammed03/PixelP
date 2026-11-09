@@ -15,5 +15,23 @@
       "binding": "PIXELP_BUCKET",
       "bucket_name": "pixelp"
     }
-  ]
+  ],
+  "d1_databases": [
+    {
+      "binding": "PIXELP_DB",
+      "database_name": "pixelp",
+      "database_id": "71c275f9-efc2-40f8-9a80-0416b0d7f72f"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "PIXELP_KV",
+      "id": "bbe264e595ba402a9c4cbd08590daeff"
+    }
+  ],
+  "vars": {
+    "PUBLIC_MEDIA_BASE_URL": "https://pub-1e1f03cba3ca4491893c12cf937eb996.r2.dev",
+    "MAX_STORAGE_BYTES": "1073741824",
+    "MAX_UPLOAD_BYTES": "10485760"
+  }
 }
